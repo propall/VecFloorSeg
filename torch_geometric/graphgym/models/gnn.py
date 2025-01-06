@@ -2,17 +2,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import torch_geometric.graphgym.register as register
-from torch_geometric.graphgym.config import cfg
-from torch_geometric.graphgym.init import init_weights
+import torch_geometric.graphgym.register as register # Contains registration mechanisms for custom modules
+from torch_geometric.graphgym.config import cfg # Global config that defines GNN architecture
+from torch_geometric.graphgym.init import init_weights # Utility function to initialize model weights
 from torch_geometric.graphgym.models.layer import (
-    BatchNorm1dNode,
-    BatchNorm1dEdge,
+    BatchNorm1dNode, # Batch normalization for node features
+    BatchNorm1dEdge, # # Batch normalization for edge features
     GeneralLayer,
     GeneralMultiLayer,
     new_layer_config,
 )
-from torch_geometric.graphgym.register import register_stage
+from torch_geometric.graphgym.register import register_stage # Registers custom GNN stages for modularity
 
 
 def GNNLayer(dim_in, dim_out, has_act=True, **kwargs):

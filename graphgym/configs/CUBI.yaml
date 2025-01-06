@@ -1,38 +1,47 @@
-out_dir: results
+out_dir: results # Specifies the directory where the results (such as model checkpoints, logs, and metrics) will be saved
 custom_metrics: ['edge_classification']
+
 dataset:
   format: PyG
   name: CUBICASA_Merge_DUALIMG_1
-  task: node
-  task_type: semantic_segmentation
-  dir: /home/ybc2021/Datasets/CUBI_3
-  node_encoder: true
-  node_encoder_name: merge_node_resnet_1
-  node_encoder_bn: false
+  task: node # Task is node classification
+  task_type: semantic_segmentation # Downstream task is performing semantic segmentation of the nodes
+  dir: /home/ybc2021/Datasets/CUBI_3 # Path to dataset
 
-  edge_encoder: false
-  edge_encoder_name: sin_pos_t_edge_2
-  edge_encoder_bn: true
+  # Encoder: Encoders preprocess node and edge features before passing them to the model
+
+  # Node Encoders
+  node_encoder: true # Use a node encoder
+  node_encoder_name: merge_node_resnet_1 # Specify the encoder name 
+  node_encoder_bn: false # Don't apply batch normalization on node encoder outputs.
+
+  # Edge Encoders
+  edge_encoder: false # Don't use an edge encoder
+  edge_encoder_name: sin_pos_t_edge_2 # Specify a placeholder name
+  edge_encoder_bn: true # Apply batch norm on edge encoder outputs(if edge encoder is used ofcourse)
 
   category: [
       0.249, 1.104, 0.054, 1.221, 1.092, 0.922, 1.223, 0.754,
       0.881, 2.151, 9.821, 0.407
-  ]
-  augmentation: true
+  ] # category weights used to address class imbalance in the data
+  augmentation: true # Apply data augmentations
 
+# Training Configuration
 train:
-  batch_size: 8
-  eval_period: 2
-  ckpt_period: 50
-  sampler: full_batch
+  batch_size: 8 # batch size
+  eval_period: 2 # Evaluation is performed every 2 epochs
+  ckpt_period: 50 # Checkpoints are saved every 50 epochs. 
+  sampler: full_batch # Specifies the sampling strategy, which is full_batch, meaning the entire graph is processed at once.
 
-  auto_resume: false
-  epoch_resume: -1
+  auto_resume: false # Training will not automatically resume from the last checkpoint.
+  epoch_resume: -1 # If training resumes, it starts from -1, meaning no specific epoch is resumed.
 
+# Validation Configuration
 val:
-  batch_size: 1
-  extra_infos: false
+  batch_size: 1 # Validation batch size
+  extra_infos: false # no extra information will be logged during validation.
 
+# Shared Parameters: Define shared dimensions and feature spaces across the model
 share:
   dim_edge: 2
   dim_node: 4

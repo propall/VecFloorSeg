@@ -15,6 +15,8 @@ from typing import (
     Union,
 )
 
+# S9torage system for graph data used in PyTorch Geometric (PyG)
+
 import torch
 from torch import Tensor
 from torch_sparse import SparseTensor, coalesce
@@ -27,6 +29,10 @@ N_KEYS = {'x', 'feat', 'pos', 'batch'}
 
 
 class BaseStorage(MutableMapping):
+    """
+    BaseStorage class is a foundational class that wraps a Python dictionary and extends it with additional functionality for storing and managing graph-related data.
+    
+    """
     # This class wraps a Python dictionary and extends it as follows:
     # 1. It allows attribute assignments, e.g.:
     #    `storage.x = ...` in addition to `storage['x'] = ...`

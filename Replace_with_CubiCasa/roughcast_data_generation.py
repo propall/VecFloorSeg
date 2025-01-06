@@ -8,10 +8,25 @@ import numpy as np
 from numpy import genfromtxt
 from xml.dom import minidom
 from PIL import Image, ImagePalette
-from floortrans.loaders.house import House
+# from floortrans.loaders.house import House # This is not used
+import lmdb
+"""
+The code converts furnished floorplans into roughcast (basic/unfurnished) versions by retaining only basic elements like:
+- Walls
+- Doors
+- Windows
+- Railings
+- Stairs
+And removing furniture and other decorative elements.
 
+"""
 
 class FloorplanSVG_Roughcast(Dataset):
+    """
+    - Handles loading of floorplan data
+    - Can work with both text files and LMDB database formats
+    - Excludes certain problematic floorplans listed in excludeListTrain
+    """
     def __init__(self, data_folder, data_file, is_transform=True,
                  augmentations=None, img_norm=True, format='txt',
                  original_size=False, lmdb_folder='cubi_lmdb/'):
@@ -20,12 +35,13 @@ class FloorplanSVG_Roughcast(Dataset):
         self.augmentations = augmentations
         self.get_data = None
         self.original_size = original_size
-        self.image_file_name = '/F1_scaled.png'
-        self.org_image_file_name = '/F1_original.png'
-        self.svg_file_name = '/model.svg'
+        self.org_image_file_name = '/F1_original.png' # Original floorplan image
+        self.image_file_name = '/F1_scaled.png'       # Scaled floorplan image
+        self.svg_file_name = '/model.svg'             # SVG file containing the floorplan data
 
         if format == 'txt':
             self.get_data = self.get_txt
+        
         if format == 'lmdb':
             self.lmdb = lmdb.open(data_folder + lmdb_folder, readonly=True,
                                   max_readers=8, lock=False,
@@ -34,24 +50,26 @@ class FloorplanSVG_Roughcast(Dataset):
             self.is_transform = False
 
         self.data_folder = data_folder
+        
         # Load txt file to list
         excludeListTrain = [
-            '\\high_quality_architectural\\2003\\',
-            '\\high_quality_architectural\\2565\\',
-            '\\high_quality_architectural\\6143\\',
-            '\\high_quality_architectural\\10074\\',
-            '\\high_quality_architectural\\10754\\',
-            '\\high_quality_architectural\\10769\\',
-            '\\high_quality_architectural\\14611\\',
-            '\\high_quality\\7092\\',
-            '\\high_quality\\1692\\',
+            'high_quality_architectural/2003/',
+            'high_quality_architectural/2565/',
+            'high_quality_architectural/6143/',
+            'high_quality_architectural/10074/',
+            'high_quality_architectural/10754/',
+            'high_quality_architectural/10769/',
+            'high_quality_architectural/14611/',
+            'high_quality/7092/',
+            'high_quality/1692/',
 
-            'high_quality_architectural\\10',  # img does not match label
+            'high_quality_architectural/10/',  # img does not match label
         ]
-        folders = genfromtxt(data_folder + data_file, dtype='str')
+        folders = genfromtxt(data_folder + data_file, dtype='str') # Read txt data to numpy array
+        
         self.folders = []
         for x in folders:
-            x = x.replace('/', '\\')
+            # x = x.replace('/', '\\') # This is Windows specific path, ubuntu can use default
             if x not in excludeListTrain:
                 self.folders.append(x)
 
@@ -95,9 +113,14 @@ class FloorplanSVG_Roughcast(Dataset):
 
 
 class House_Roughcast:
+    """
+    Processes SVG files by:
+    - Reading the SVG using minidom
+    - Filtering elements based on their class attributes
+    - Writing new "roughcast" versions of the SVGs
+    """
     def __init__(self, path):
         self.retain_and_write_1(path)
-
 
     def retain_and_write_2(self, path):
         tree = minidom.parse(path)
@@ -178,13 +201,13 @@ class House_Roughcast:
 
 if __name__ == "__main__":
     """
-    目标：将furnished floorplans变成roughcast floorplans
+    Target：Convert furnished floorplans into roughcast floorplans
     方式，创建一个新的svg文件，将对应的attribute 写入
     """
     from tqdm import tqdm
     d = FloorplanSVG_Roughcast(
-        data_folder="E:\\Datasets\\cubicasa5k",
-        data_file='\\train.txt',
+        data_folder="../cubicasa5k/",
+        data_file='test.txt',
         is_transform=False
     )
     # multiple process

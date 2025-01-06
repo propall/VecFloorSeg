@@ -1,6 +1,6 @@
 import argparse
 
-
+# Not used in the codebase
 def parse_args() -> argparse.Namespace:
     r"""Parses the command line arguments."""
     parser = argparse.ArgumentParser(description='GraphGym')

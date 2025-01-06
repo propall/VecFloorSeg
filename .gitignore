@@ -1,3 +1,11 @@
 .idea/
 __pycache__/
+CUBI_new_train/
+CUBI_new_test/
+CUBI_new_val/
+cubicasa5k/
+cubicasa5k.zip
+R2V.rar
+models/resnet101-torch.pth
+
 

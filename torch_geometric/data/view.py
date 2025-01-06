@@ -1,6 +1,10 @@
 from collections.abc import Mapping
 from typing import Iterable, List
 
+"""
+This code implements custom views for working with dictionaries.
+Generally, If we use pandas dataframes, we use custom filters and view its contents, this code has some custom views/filters to view the mapped data.
+"""
 
 class MappingView(object):
     def __init__(self, mapping: Mapping, *args: List[str]):

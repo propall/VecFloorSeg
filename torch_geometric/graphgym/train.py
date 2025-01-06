@@ -24,7 +24,11 @@ from torch_geometric.graphgym.utils.epoch import (
 
 
 def train_epoch(logger, loader, model, optimizer, scheduler):
-    model.train()
+    """
+    Responsible for performing a single epoch of training
+    It is called from train fn
+    """
+    model.train() # Set the model to train (enable any dropouts for training  )
     time_start = time.time()
     for batch in tqdm(loader):
         if isinstance(batch, list):
@@ -69,9 +73,69 @@ def train_epoch(logger, loader, model, optimizer, scheduler):
         time_start = time.time()
     scheduler.step()
 
+def train(loggers, loaders, model, optimizer, scheduler):
+    """
+    The core training pipeline
+
+    Args:
+        loggers: List of loggers
+        loaders: List of loaders
+        model: GNN model
+        optimizer: PyTorch optimizer
+        scheduler: PyTorch learning rate scheduler
+
+    - Manages the entire training process over multiple epochs by calling  train_epoch
+    - Periodically evaluates the model (eval_epoch) on validation and test sets
+    - Saves checkpoints at specified intervals. 
+    """
+    start_epoch = 0
+    if cfg.train.auto_resume:
+        start_epoch = load_ckpt(
+            model, optimizer, scheduler,
+            cfg.train.epoch_resume,
+            cfg.train.ckpt_prefix
+        )
+    if start_epoch == cfg.optim.max_epoch:
+        logging.info('Checkpoint found, Task already done')
+    else:
+        logging.info('Start from epoch {}'.format(start_epoch))
+
+    num_splits = len(loggers)
+    split_names = ['val', 'test']
+    for cur_epoch in range(start_epoch, cfg.optim.max_epoch):
+        train_epoch(loggers[0], loaders[0], model, optimizer, scheduler)
+        if is_train_eval_epoch(cur_epoch):
+            loggers[0].write_epoch(cur_epoch)
+        if is_eval_epoch(cur_epoch):
+            for i in range(1, num_splits):
+                eval_epoch(loggers[i], loaders[i], model,
+                           split=split_names[i - 1])
+                loggers[i].write_epoch(cur_epoch)
+            if loggers[1].best_stat['updated']:
+                save_ckpt(model, optimizer, scheduler, epoch=1, prefix='best')
+                loggers[1].best_stat['updated'] = False
+
+        if is_ckpt_epoch(cur_epoch) and cfg.train.enable_ckpt:
+            save_ckpt(model, optimizer, scheduler, cur_epoch, prefix=cfg.train.ckpt_prefix)
+
+    for logger in loggers:
+        logger.close()
+    if cfg.train.ckpt_clean:
+        clean_ckpt()
+
+    logging.info('Task done, results saved in {}'.format(cfg.run_dir))
+
+
+
+"""
+@torch.no_grad(): PyTorch decorator that disables gradient computation for the code block it decorates.
+
+This is used when performing inference. Disabling gradients can lead to performance improvements by reducing memory consumption and speeding up computations.
+"""
 
 @torch.no_grad()
 def eval_epoch(logger, loader, model, split='val'):
+    # eval_epoch performs evaluation on a single epoch 
     model.eval()
     time_start = time.time()
 
@@ -164,60 +228,9 @@ def eval_epoch(logger, loader, model, split='val'):
     else:
         return None
 
-
-def train(loggers, loaders, model, optimizer, scheduler):
-    """
-    The core training pipeline
-
-    Args:
-        loggers: List of loggers
-        loaders: List of loaders
-        model: GNN model
-        optimizer: PyTorch optimizer
-        scheduler: PyTorch learning rate scheduler
-
-    """
-    start_epoch = 0
-    if cfg.train.auto_resume:
-        start_epoch = load_ckpt(
-            model, optimizer, scheduler,
-            cfg.train.epoch_resume,
-            cfg.train.ckpt_prefix
-        )
-    if start_epoch == cfg.optim.max_epoch:
-        logging.info('Checkpoint found, Task already done')
-    else:
-        logging.info('Start from epoch {}'.format(start_epoch))
-
-    num_splits = len(loggers)
-    split_names = ['val', 'test']
-    for cur_epoch in range(start_epoch, cfg.optim.max_epoch):
-        train_epoch(loggers[0], loaders[0], model, optimizer, scheduler)
-        if is_train_eval_epoch(cur_epoch):
-            loggers[0].write_epoch(cur_epoch)
-        if is_eval_epoch(cur_epoch):
-            for i in range(1, num_splits):
-                eval_epoch(loggers[i], loaders[i], model,
-                           split=split_names[i - 1])
-                loggers[i].write_epoch(cur_epoch)
-            if loggers[1].best_stat['updated']:
-                save_ckpt(model, optimizer, scheduler, epoch=1, prefix='best')
-                loggers[1].best_stat['updated'] = False
-
-        if is_ckpt_epoch(cur_epoch) and cfg.train.enable_ckpt:
-            save_ckpt(model, optimizer, scheduler, cur_epoch, prefix=cfg.train.ckpt_prefix)
-
-    for logger in loggers:
-        logger.close()
-    if cfg.train.ckpt_clean:
-        clean_ckpt()
-
-    logging.info('Task done, results saved in {}'.format(cfg.run_dir))
-
-
 def eval(loggers, loaders, model):
     """
-    The core evaluation pipeline.
+    The core evaluation pipeline. This calls eval_epoch 
     """
     start_epoch = load_ckpt(
         model, None, None,
@@ -247,3 +260,8 @@ def eval(loggers, loaders, model):
         logger.close()
     if cfg.train.ckpt_clean:
         clean_ckpt()
+        
+if __name__ == '__main__':
+    # train() is the entrypoint to this script but we need the params
+    
+    pass

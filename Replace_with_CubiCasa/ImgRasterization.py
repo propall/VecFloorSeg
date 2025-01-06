@@ -21,24 +21,24 @@ if __name__ == "__main__":
     将svg文件转化成RGBA格式的图像
     """
     excludeList = [
-        '\\high_quality_architectural\\2003\\',
-        '\\high_quality_architectural\\2565\\',
-        '\\high_quality_architectural\\6143\\',
-        '\\high_quality_architectural\\10074\\',
-        '\\high_quality_architectural\\10754\\',
-        '\\high_quality_architectural\\10769\\',
-        '\\high_quality_architectural\\14611\\',
-        '\\high_quality\\7092\\',
-        '\\high_quality\\1692\\',
-        'high_quality_architectural\\10',  # img does not match label
+        'high_quality_architectural/2003/',
+        'high_quality_architectural/2565/',
+        'high_quality_architectural/6143/',
+        'high_quality_architectural/10074/',
+        'high_quality_architectural/10754/',
+        'high_quality_architectural/10769/',
+        'high_quality_architectural/14611/',
+        'high_quality/7092/',
+        'high_quality/1692/',
+        'high_quality_architectural/10/',  # img does not match label
     ]
 
-    dataDir = "E:\\Datasets\\cubicasa5k"
-    dataFile = "\\test.txt"
+    dataDir = "../cubicasa5k/"
+    dataFile = "val.txt"
     all_folders = genfromtxt(dataDir + dataFile, dtype='str')
     folders = []
     for x in all_folders:
-        x = x.replace('/', '\\')
+        # x = x.replace('/', '\\') # This is Windows specific path, ubuntu 
         if x not in excludeList:
             folders.append(x)
 

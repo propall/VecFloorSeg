@@ -2,6 +2,8 @@ import os
 import os.path as osp
 from typing import Optional
 
+# This code is a utility for managing the cache directory used by PyTorch Geometric (PyG) for storing related data, such as datasets, models, or other resources. It defines functions to retrieve and configure the directory path for PyG-related data.
+
 ENV_PYG_HOME = 'PYG_HOME'
 DEFAULT_CACHE_DIR = osp.join('~', '.cache', 'pyg')
 

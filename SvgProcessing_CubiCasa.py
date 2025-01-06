@@ -3,6 +3,21 @@ import os
 import numpy as np
 import triangle as tr
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+
+"""
+- This code processes floor plan SVGs from the CubiCasa5k dataset
+- It performs Delaunay triangulation on floor plans
+- It extracts wall shapes, doors, and windows
+- It builds dual graph relationships
+- Finally, it saves the processed data into pickle files
+
+"""
+
+
+# import sys
+# Add the parent directory of DataPreparation to sys.path
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from DataPreparation import WALLTYPE, NOTWALL, DOORTYPE, WINDOWTYPE, PARTITION, NOTPARTITION, \
     TARGET_DIR, REFER_NAME, CLASSES
@@ -17,6 +32,16 @@ from matplotlib.colors import ListedColormap
 
 
 class SVGParser:
+    """
+    # Base class for parsing SVG files
+    # - Extracts shapes like lines, paths, circles
+    # - Gets image dimensions
+    # - Gets wall shapes
+    
+    dom = xml.dom.minidom.parse('xml_file.xml')
+    root = dom.documentElement
+    
+    """
 
     def __init__(self, filepath):
         self.filepath = filepath
@@ -113,7 +138,10 @@ class SVGParser:
 
 class SVGParserCUBI(SVGParser):
     """
-    processing cubicasa-5k
+    # Specialized parser for CubiCasa-5k dataset
+    # - Inherits from SVGParser
+    # - Processes walls, doors, windows
+    # - Maps elements to vertices
     """
     def __init__(self, filepath):
         super().__init__(filepath)
@@ -186,6 +214,9 @@ class SVGParserCUBI(SVGParser):
 
 def delaunayTriangulation(verticesDict, filePth, scaleCoeff=10, **kwargs):
     """
+    # Performs triangulation on the floor plan vertices
+    # Creates a mesh of triangles from the vertices
+    
     :param verticesDict:
         dict(
             key= coordintaes of floorplan endpoints，
@@ -196,8 +227,10 @@ def delaunayTriangulation(verticesDict, filePth, scaleCoeff=10, **kwargs):
     :param kwargs:
     :return:
     """
-    fileName = filePth.split('\\')[-2]
-    lblImg = Image.open('{}\\annotation\\{}.png'.format(TARGET_DIR, fileName))
+    # fileName = filePth.split('\\')[-2]
+    fileName = os.path.basename(os.path.dirname(filePth))
+
+    lblImg = Image.open('{}/annotation/{}.png'.format(TARGET_DIR, fileName))
 
     width, height = lblImg.width, lblImg.height
     w, h = width * 1., height * 1.
@@ -260,14 +293,18 @@ def plotProblemPts(vertices, *pts):
 
 def triangleCorrespondingLabel(segWalls, svgPth, scaleCoeff=1):
     """
+    # Maps triangles to their corresponding labels in the annotation
+    # Helps identify what each triangle represents (wall, room, etc.)
+    
     :param segWalls: 进行delaunay三角剖分后的数据结构
     :param svgPth: 数据的名称
     :param scaleCoeff: 缩放比例
     :return: 向segWalls中加入triangles_label和cmap属性,
         shape(triangles_label) == shape(segWalls['triangles'])
     """
-    fileName = svgPth.split('\\')[-2]
-    lblImg = Image.open('{}\\annotation\\{}.png'.format(TARGET_DIR, fileName))
+    # fileName = svgPth.split('\\')[-2]
+    fileName = os.path.basename(os.path.dirname(svgPth))
+    lblImg = Image.open('{}/annotation/{}.png'.format(TARGET_DIR, fileName))
     lblArray = np.array(lblImg, dtype=np.uint8)
 
     # # 初始化ndarray
@@ -325,7 +362,7 @@ def plotTriangles(walls, segWalls, filePth, saveDir, plot_label=True):
     ax3.get_yaxis().set_visible(False)
     plt.subplots_adjust(wspace=0, hspace=0)
 
-    plt.savefig(os.path.join(saveDir, filePth.split('\\')[-2] + '.png'))
+    plt.savefig(os.path.join(saveDir, os.path.basename(os.path.dirname(filePth)) + '.png'))
     plt.close()
 
 
@@ -333,7 +370,7 @@ def plotVenoGraph(topoDict, filePth, saveDir):
     fig, ax = plt.subplots()
     from Utils.triPlot import plot
     plot(ax, **topoDict)
-    fig.savefig(os.path.join(saveDir, filePth.split('\\')[-2] + '_triGraph.png'))
+    fig.savefig(os.path.join(saveDir, os.path.basename(os.path.dirname(filePth)) + '_triGraph.png'))
     plt.close()
 
 
@@ -356,7 +393,7 @@ def plotMergeGraph(
 
     ax = plt.subplot(234)
     plot(ax, **topoDict)
-    plt.savefig(os.path.join(saveDir, filePth.split('\\')[-2] + '_merge.png'))
+    plt.savefig(os.path.join(saveDir, os.path.basename(os.path.dirname(filePth)) + '_merge.png'))
     plt.close()
 
 
@@ -459,7 +496,7 @@ def _genTriangleGraph(nodePos, triangles, walls, extendWalls, pDoors, pWindows):
             ])
             tEdgeDual.append(key)
         else:
-            value.append(-1) # 如果后一个端点的值是-1，那么该边没有对偶边
+            value.append(-1) # If the value of one point is -1, then the edge does not have a pair of edges
             pass
 
     return tEdge, tEdgeAttr, tEdgeType, node, nodeAttr, tEdgeDual, ETPairs
@@ -495,6 +532,14 @@ def buildDualRelationship(segWalls, venoGraph, edgeTriPairs):
 
 
 def worker(svgPth, dataVerifyDir=None):
+    """
+    # Main processing function that:
+    # 1. Parses SVG
+    # 2. Gets wall shapes
+    # 3. Performs triangulation
+    # 4. Builds graph relationships
+    # 5. Returns processed data
+    """
     s = 50
 
     p = SVGParserCUBI(svgPth + 'model.svg')
@@ -541,66 +586,92 @@ def worker(svgPth, dataVerifyDir=None):
             svgPth, dataVerifyDir, plot_label=False
         )
 
-    return svgPth.split('\\')[-2], segWalls, fplanVeno, merge_segWalls, merge_fplanVeno
+    return os.path.basename(os.path.dirname(svgPth)), segWalls, fplanVeno, merge_segWalls, merge_fplanVeno
 
 
 if __name__ == "__main__":
+    
+    
 
-    """CubiCasa Delaunay的批量操作，注意修改train, test, val"""
-    dataDir = "E:\\Datasets\\cubicasa5k"
-    split = 'val'
-    dataFile = "\\{}.txt".format(split)
+    """CubiCasa Delaunay的批量操作 note the modification of train, test, val"""
+    dataDir = "cubicasa5k"
+    split = 'test'
+    dataFile = "/{}.txt".format(split)
     folders = np.genfromtxt(dataDir + dataFile, dtype='str')
-    excludeList = [
-        '\\high_quality_architectural\\2003\\',
-        '\\high_quality_architectural\\2565\\',
-        '\\high_quality_architectural\\6143\\',
-        '\\high_quality_architectural\\10074\\',
-        '\\high_quality_architectural\\10754\\',
-        '\\high_quality_architectural\\10769\\',
-        '\\high_quality_architectural\\14611\\',
-        '\\high_quality\\7092\\',
-        '\\high_quality\\1692\\',
 
-        'high_quality_architectural\\10', # img does not match label
+    excludeList = [
+        '/high_quality_architectural/2003/',
+        '/high_quality_architectural/2565/',
+        '/high_quality_architectural/6143/',
+        '/high_quality_architectural/10074/',
+        '/high_quality_architectural/10754/',
+        '/high_quality_architectural/10769/',
+        '/high_quality_architectural/14611/',
+        '/high_quality/7092/',
+        '/high_quality/1692/',
+
+        'high_quality_architectural/10', # img does not match label
     ]
     dataVerificationDir = None
+    
+    if split == 'val':
+        TARGET_DIR = "CUBI_new_val"
+    elif split == 'train':
+        TARGET_DIR = "CUBI_new_train"  # or whatever your train folder is called
+    elif split == 'test':
+        TARGET_DIR = "CUBI_new_test"   # or whatever your test folder is called
 
     ffolders = []
     for x in folders:
-        x = x.replace('/', '\\')
+        # x = x.replace('/', '\\') # This is Windows specific path, ubuntu can use default
         if x not in excludeList:
             ffolders.append(x)
     fs = [dataDir + x for x in ffolders]
     sorted(fs)
+    print("fs: ", fs) # List of folders in dataFile
 
     """multiple process"""
-    # import multiprocessing
-    # from multiprocessing import Pool
-    # from tqdm import tqdm
-    # import pickle
-    #
-    # cpuCount = multiprocessing.cpu_count() - 4
-    # pool = Pool(cpuCount)
-    #
-    # writeIn = {}
-    # merge_writeIn = {}
-    # if dataVerificationDir is not None:
-    #     import functools
-    #     func = functools.partial(worker, dataVerifyDir=dataVerificationDir)
-    # else:
-    #     func = worker
-    # for res in tqdm(pool.imap_unordered(func, fs), total=len(fs)):
-    #     writeIn[res[0]] = [res[1], res[2]]
-    #     merge_writeIn[res[0]] = [res[3], res[4]]
-    #
-    # with open('{}\\{}.pkl'.format(TARGET_DIR, split), 'wb') as f:
-    #     pickle.dump(writeIn, f)
-    # with open('{}\\merge_{}.pkl'.format(TARGET_DIR, split), 'wb') as f:
-    #     pickle.dump(merge_writeIn, f)
+    import multiprocessing
+    from multiprocessing import Pool
+    import pickle
+    
+    # Calculate number of CPU cores to use 
+    total_cores = multiprocessing.cpu_count()
+    cpuCount = max(3, int(total_cores - (3/8 * total_cores)))  # Convert to int # 3/8th of cores reserved as system cores or 3 cores, whichever is greater
+    
+    pool = Pool(cpuCount) # Create a process pool
+    
+    # Initialize dictionaries to store results
+    writeIn = {}          # Stores original triangulation and graph data
+    merge_writeIn = {}    # Stores merged versions of data
+    
+    # If data verification directory is provided, create a partial function
+    if dataVerificationDir is not None:
+        import functools
+        func = functools.partial(worker, dataVerifyDir=dataVerificationDir)
+    else:
+        func = worker
+    
+    # Parallel Processing
+    #pool.imap_unordered: distributes work across processes
+    for res in tqdm(pool.imap_unordered(func, fs), total=len(fs)):
+        writeIn[res[0]] = [res[1], res[2]]        # Store original results 
+        merge_writeIn[res[0]] = [res[3], res[4]]  # Store merged results
+
+    # Save results to pickle files
+    with open('{}/{}.pkl'.format(TARGET_DIR, split), 'wb') as f:
+        pickle.dump(writeIn, f)
+    with open('{}/merge_{}.pkl'.format(TARGET_DIR, split), 'wb') as f:
+        pickle.dump(merge_writeIn, f)
 
     """single process"""
-    from tqdm import tqdm
+    
 
-    for f in tqdm(fs[:]):
-        worker(f, dataVerificationDir)
+    # for f in tqdm(fs[:]):
+    #     """
+    #     fs[:] creates a shallow copy of the list fs. 
+    #     This means all elements are the same, but it ensures that the original list is not modified if changes are made inside the loop.
+        
+    #     saves visualizations in dataVerificationDir
+    #     """
+    #     worker(f, dataVerificationDir)

@@ -2,7 +2,7 @@ WALLTYPE, NOTWALL, DOORTYPE, WINDOWTYPE = 0, 1, 2, 3
 PARTITION, NOTPARTITION = 0, 1
 
 TARGET_DIR = 'CUBI'
-REFER_NAME = 'wall_svg_1.png'
+REFER_NAME = 'wall_svg.png'
 
 CLASSES = (
     'background', 'Outdoor', 'Wall', 'Kitchen', 'Dining', 'Bedroom',

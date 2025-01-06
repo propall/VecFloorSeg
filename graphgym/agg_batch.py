@@ -2,6 +2,7 @@ import argparse
 
 from torch_geometric.graphgym.utils.agg_runs import agg_batch
 
+# This script is a utility for aggregating and analyzing the results of multiple experimental runs
 
 def parse_args():
     """Parses the arguments."""
