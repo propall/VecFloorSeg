@@ -41,6 +41,9 @@ class SVGParser:
     dom = xml.dom.minidom.parse('xml_file.xml')
     root = dom.documentElement
     
+    - Parsing the SVG XML file and traversing its structure to extract geometric shapes (lines, paths, circles).
+    
+    
     """
 
     def __init__(self, filepath):
@@ -48,10 +51,15 @@ class SVGParser:
         self.dom = parse(filepath)
         self.root = self.dom.documentElement
 
-        self.shapes = ['line', 'path', 'circle']
-        self.filtered_nodename = ['image', 'g', 'defs']
+        self.shapes = ['line', 'path', 'circle'] # supported SVG elements in the code refer to the different types of SVG XML tags that describe basic shapes.
+        self.filtered_nodename = ['image', 'g', 'defs'] # specifies the tags to ignore (<image>: Embedded raster images; <g>: Group tags that wrap several shapes for organization but don’t define actual geometry; <defs>: Definitions (e.g., reusable shapes or styles), not directly part of the SVG structure)
 
     def _traverse_tree(self, root, ret_list, parent_attrs):
+        """
+        - Recursively traverses the XML DOM (Document Object Model).
+        - When it encounters a supported shape (i.e., a <line>, <path>, or <circle> tag), it extracts the tag’s attributes (coordinates, shape details) and adds them to "ret_list"
+        
+        """
         parent_attrs = copy.copy(parent_attrs)
 
         if root.attributes is not None:
@@ -75,18 +83,21 @@ class SVGParser:
             self._traverse_tree(child, ret_list, parent_attrs)
 
     def get_all_shape(self):
-        # obtain all shape
+        # Collects and returns all shapes in the SVG document.
         ret_list = []
         self._traverse_tree(self.root, ret_list, {})
         return ret_list
 
     def get_image_size(self):
+        # Extracts the width and height of the image embedded in the SVG file.
         img_info = self.root.getElementsByTagName('image')[0]
         img_width = img_info.getAttribute('width')
         img_height = img_info.getAttribute('height')
         return float(img_width), float(img_height)
 
     def getWallShape(self):
+        # Extracts wall vertices from the SVG paths tagged with "Wall" or "Railing"
+        # The code that defines boundaries to create "primal graph" in VecFloorSeg paper
         wallList = []
         wallVertices = {}
         vIdx = 0
@@ -138,6 +149,13 @@ class SVGParser:
 
 class SVGParserCUBI(SVGParser):
     """
+    This is a subclass of SVGParser and processes SVGs in the specific format used in the Cubicasa5k dataset.
+    
+    In SVG images, different parts of the floor plan (walls, doors, windows) are grouped under group tags(<g id=''>) with specific id attributes.
+    <g id="Wall">: Contains wall shapes.
+    <g id="Door">: Contains door shapes.
+    <g id="Window">: Contains window shapes.
+    
     # Specialized parser for CubiCasa-5k dataset
     # - Inherits from SVGParser
     # - Processes walls, doors, windows
@@ -159,10 +177,23 @@ class SVGParserCUBI(SVGParser):
             doors: list(door primitive idx)
             windows: list(window primitive idx)
         """
-        wallVertices = {}
-        holes = []
-        primitiveDoors, primitiveWindows = [], []
-        vIdx = 0
+        wallVertices = {} # Dictionary to store vertices of walls.
+        
+        """
+        Triangulation Holes:
+        - In the context of Delaunay triangulation and floor plan segmentation, a triangulation hole refers to a region within the triangulation process that is excluded from being filled with triangles. 
+        - These regions are typically represented as polygonal voids or gaps that do not get subdivided into triangles during the triangulation process.
+        
+        Why are triangulation holes used in floor plan segmentation?
+        In the context of floor plans:
+        - The triangulation is focused on accurately representing walls and boundaries.
+        - The center of the rooms (the floor) may be left out as a "hole" because the floor is a continuous region, not a structural element.
+        - If you want to detect the floors separately, you would then use a separate segmentation process to detect the largest contiguous region (the untriangulated floor area).
+        """
+        
+        holes = [] # Center points of walls for triangulation holes.
+        primitiveDoors, primitiveWindows = [], [] # Store primitive indices for doors and windows.
+        vIdx = 0 # Vertex index counter
         for e in self.dom.getElementsByTagName('g'):
             if e.getAttribute("id") == "Wall" or e.getAttribute("id") == "Railing":
                 wall = PolygonWall(e, self.wallIdx, self.shape)

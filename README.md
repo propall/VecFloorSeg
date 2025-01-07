@@ -54,6 +54,25 @@ icon_cls = ["Empty", "Window", "Door", "Closet", "Electr. Appl.", "Toilet", "Sin
 python ImageProcessing_CubiCasa.py => Draw the wireframe of svg floorplan and turn the wireframe and image annotation into mmseg format
 
 7)
+
+
+```
+From the VecFloorSeg paper:
+1) Graph Stream uses:
+- Pickle files containing:
+    - Node features (junctions)
+    - Edge features (walls)
+    - Graph topology
+2) Image Stream uses:
+    - image_partition/ for wireframe data
+    - annotations/ for segmentation masks
+
+
+```
+
+
+
+
 ```
 torch_geometric/
 ├── graphgym/                 # GraphGym framework
